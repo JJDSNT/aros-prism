@@ -104,6 +104,49 @@ References:
 - https://github.com/LizardByte/Sunshine
 - https://github.com/moonlight-stream/moonlight-qt
 
+## Open Screen: updated protocol and dependency research (2026-10-28)
+
+The W3C Open Screen work should be tracked as **Open Screen Network Protocol** and **Open Screen Application Protocol**, rather than assuming that a single historical Open Screen Protocol document remains the whole specification. Verify exact working-draft revisions and interoperability requirements before implementation.
+
+References:
+- https://www.w3.org/TR/openscreen-network/
+- https://www.w3.org/TR/openscreen-application/
+- https://chromium.googlesource.com/openscreen/
+- https://github.com/chromium/openscreen
+
+**Existing code:** Chromium's Open Screen Library contains relevant discovery, casting and Open Screen work, including OSP demonstration code. Its existence does **not** establish a complete, current, interoperable implementation of both W3C specifications. Audit the current code, build requirements, C++ toolchain, dependency licenses, protocol coverage and maintenance status before attempting a port.
+
+**Protocol layers to validate separately:**
+1. Service discovery and resolution: compare the Network Protocol requirements with the actual AROS Bonami DNS-SD implementation, including service-type browsing, PTR/SRV/TXT/A/AAAA and IPv6 behavior.
+2. Authentication and pairing: identify the precise password-authenticated key-exchange variant and its binding to authenticated transport. Do not conflate SPAKE2, SPAKE2+ and EC J-PAKE.
+3. Secure transport: investigate QUIC requirements and their TLS 1.3 integration, UDP/event-loop integration, timers, IPv6, certificate validation and platform entropy.
+4. Application semantics: map the Application Protocol's presentation roles and lifecycle to Prism sessions without putting W3C protocol types in Prism's graphics/HIDD interfaces.
+5. Actual display semantics: distinguish URL/media presentation from desktop mirroring and extended desktop; Open Screen is not automatically a generic remote framebuffer or monitor protocol.
+
+**AROS baseline:** `workbench/libs/mbedtls/` currently builds mbedTLS 3.6.7 and has AROS adapters for `entropy.resource` and `bsdsocket.library`. Its current configuration enables TLS 1.3 client support; do not assume QUIC-TLS integration or SPAKE2 is available. The mbedTLS 3.6.7 PSA PAKE source includes EC J-PAKE; that is not evidence of SPAKE2. The ngtcp2 upstream documentation lists TLS backends such as BoringSSL/AWS-LC, wolfSSL and OpenSSL; it does not establish a ready-to-use mbedTLS integration. Research crypto/backend feasibility before choosing a QUIC port.
+
+Sources:
+- https://github.com/aros-development-team/AROS/blob/master/workbench/libs/mbedtls/mmakefile.src
+- https://github.com/aros-development-team/AROS/blob/master/workbench/libs/mbedtls/mbedtls_aros_config.h
+- https://github.com/aros-development-team/AROS/blob/master/workbench/libs/mbedtls/mbedtls_entropy_aros.c
+- https://github.com/Mbed-TLS/mbedtls/blob/mbedtls-3.6.7/library/psa_crypto_pake.c
+- https://github.com/ngtcp2/ngtcp2
+
+### Relationship to AROS Matter
+
+[AROS Matter](https://github.com/JJDSNT/aros-matter) is a **separate project** focused initially on a Matter controller. Matter commissioning uses SPAKE2+ and its operational network stack does not depend on QUIC. Do not add Matter or the connectedhomeip SDK as Prism dependencies. The projects can independently motivate reusable upstream improvements to AROS networking, IPv6, multicast, DNS-SD/Bonami, cryptography, entropy, timers and credential handling, where applicable.
+
+Shared infrastructure should live upstream only after its actual API consumers, portability, security properties and licensing are validated. Avoid prematurely introducing one AROS shared library per algorithm or protocol.
+
+### Parallel tracks and decision gates
+
+- **Display vertical slice:** keep the existing RFB-first plan, starting with the upstream Headless HIDD and historical AROS VNC audit. An actual display demonstration must not be blocked on Open Screen/QUIC research.
+- **Open Screen feasibility:** pin W3C drafts and Open Screen Library revision; audit exact network/application requirements; produce a dependency and interoperability matrix.
+- **Generic AROS connectivity:** audit IPv6, multicast, Bonami, mbedTLS, SPAKE2 variant availability, QUIC-compatible TLS backends, event loops and timers. Only propose independently useful, testable upstream patches.
+- **Boundary acceptance:** no coupling between Prism and Matter, between RTP and AppleMIDI, or between reusable wire-protocol APIs and Prism-specific Screen/HIDD structures.
+
+The first deliverable for this research track is an **evidence-backed gap report**, not an unconditional decision to implement QUIC or Open Screen before RFB.
+
 ## Agent instructions / guardrails
 
 - Treat this as a research/architecture record, not authorization to rewrite upstream AROS or invent APIs.
