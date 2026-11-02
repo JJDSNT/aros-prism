@@ -12,7 +12,7 @@ AROS Prism aims to provide a consistent way to discover, configure, and use mult
 
 The project is intended to support AROS across architectures, with platform-specific capabilities determined by the available graphics and network drivers.
 
-Broad protocol coverage is an explicit project goal. Miracast, Google Cast, AirPlay, and Bluetooth-related mechanisms are included from the initial scope, alongside remote desktop and real-time streaming protocols. The backend model should allow additional protocols without redesigning the display manager. Inclusion in scope means intended research and development, not confirmed interoperability.
+Broad protocol coverage is an explicit project goal. Miracast, Google Cast, AirPlay, DLNA/UPnP AV, and Bluetooth-related mechanisms are included from the initial scope, alongside remote desktop and real-time streaming protocols. The backend model should allow additional protocols without redesigning the display manager. Inclusion in scope means intended research and development, not confirmed interoperability.
 
 ## Intended capabilities
 
@@ -63,7 +63,7 @@ A local display plus a network-backed virtual output is a candidate configuratio
 | Miracast / Wi-Fi Display | Candidate interoperability with compatible TVs and receivers. | Requires investigation of discovery, Wi-Fi Direct support, session negotiation, encoding, and receiver compatibility. |
 | AirPlay | Candidate interoperability with Apple-oriented display receivers. | Sender and receiver implementations are different roles; a receiver project does not provide an AROS sender. |
 | Google Cast / Chromecast | Candidate transmission to Google Cast-enabled devices. | Media playback, live video delivery, and desktop mirroring are separate use cases. Official sender/receiver application support does not establish a native AROS screen-mirroring implementation. |
-| Bluetooth | Investigate video distribution, discovery, pairing, control, and possible IP connectivity. | Bluetooth is a family of technologies and profiles, not one universal wireless-monitor protocol. Assess VDP/GAVDP/AVDTP video mechanisms and actual receiver support separately from discovery or control. |
+| DLNA / UPnP AV | Discover media servers and renderers, browse shared libraries, and control playback on compatible devices. | Media sharing and playback are distinct from framebuffer mirroring and desktop extension; interoperability, codecs, and device profiles must be validated. |\n| Bluetooth | Investigate video distribution, discovery, pairing, control, and possible IP connectivity. | Bluetooth is a family of technologies and profiles, not one universal wireless-monitor protocol. Assess VDP/GAVDP/AVDTP video mechanisms and actual receiver support separately from discovery or control. |
 | RDP | Candidate remote display and input interoperability. | An AROS client connecting to another OS is different from an AROS server exporting a Screen or virtual output. Neither alone establishes desktop extension. |
 | WebRTC | Candidate live display delivery to a browser or dedicated receiver. | Requires a media pipeline, signaling, and input handling where desired; it is not a drop-in TV casting protocol. |
 | RTP / RTCP | Candidate real-time audio/video transport for custom or compatible receivers. | Transport must be combined with codecs, session setup, and receiver behavior. RTP alone is not a complete wireless-display solution. |
@@ -75,7 +75,7 @@ Relevant reference implementations:
 - **MiracleCast:** a Miracast reference project. Its README explicitly states that the Display-Source side is not implemented. Its Linux-oriented requirements include systemd, GLib, GStreamer, and wpa_supplicant. It is a research reference, not a ready-to-use AROS sender. The README describes LGPL licensing; individual files and bundled licenses need inspection before reuse.
 - **UxPlay:** an AirPlay mirroring and audio receiver under GPLv3. It is relevant to protocol research and potential external receiver experiments, not an implementation of transmission from AROS to an Apple TV.
 
-Wi-Fi connectivity and Miracast support must be tracked separately. Transmission over an ordinary IP network does not establish Miracast interoperability.
+DLNA research should distinguish Digital Media Server (DMS), Digital Media Renderer (DMR), Digital Media Player (DMP), and Digital Media Controller (DMC) roles. Investigate SSDP discovery (UDP multicast), UPnP device/service descriptions (HTTP/XML), SOAP control, GENA event notifications, ContentDirectory, ConnectionManager, and AVTransport/RenderingControl where applicable. HTTP media delivery, supported formats, seeking, and metadata compatibility require separate validation. SSDP is not mDNS/DNS-SD; existing Bonami work cannot substitute for UPnP discovery. Keep UPnP discovery and control local-network scoped by default, avoid automatic Internet exposure, and validate untrusted XML and network responses. Prefer reusable protocol components over a monolithic DLNA implementation. Audit upstream AROS for existing HTTP, XML, SSDP, or UPnP code before implementation.\n\nWi-Fi connectivity and Miracast support must be tracked separately. Transmission over an ordinary IP network does not establish Miracast interoperability.
 
 Bluetooth investigation should include the Bluetooth SIG Video Distribution Profile (VDP), Generic A/V Distribution Profile (GAVDP), and A/V Distribution Transport Protocol (AVDTP). Discovery and control over Bluetooth with image transport over Wi-Fi is another candidate design. Compatibility with the AROS Bluetooth stack should be assessed, including possible integration with the separate Bluzing project. No existing Bluzing profile support is assumed.
 
@@ -91,7 +91,7 @@ The following decomposition is a design proposal, not an existing AROS API:
 | AROS integration | Connect display management to HIDD, graphics, Intuition, and desktop behavior. |
 | Local output backends | Present content through supported graphics drivers. |
 | Virtual output backend | Provide a renderable surface for a remote display. |
-| Network backends | Discover or connect receivers, negotiate sessions, and send updates. |
+| Network backends | Discover or connect receivers, negotiate sessions, and send updates. |\n| Optional media interoperability backends | Provide DLNA/UPnP AV server, controller, or renderer roles independently of desktop-output capabilities. |\n| Shared protocol components (proposed) | Reuse SSDP, UPnP descriptions, HTTP/XML, SOAP, and GENA where appropriate; avoid coupling to display management. |
 | Preferences and diagnostics | Configure displays and report driver, network, and performance information. |
 
 Physical outputs, virtual outputs, and transport sessions should have distinct identities. A network reconnection should not silently change the meaning of a saved desktop layout.
@@ -111,7 +111,7 @@ Cursor handling, pixel formats, changed-region tracking, buffering, and scaling 
 - [ ] Evaluate local multi-output hardware configurations.
 - [ ] Investigate Miracast and AirPlay sender interoperability as separate backends.
 - [ ] Investigate Google Cast media delivery and desktop mirroring separately.
-- [ ] Investigate Bluetooth video profiles, discovery, control, and AROS stack integration.
+- [ ] Audit upstream AROS for reusable HTTP/XML/SSDP/UPnP components and assess DLNA roles (DMS, DMR, DMP, DMC).\n- [ ] Prototype SSDP discovery and UPnP device description/control before DLNA media-server and renderer integration.\n- [ ] Investigate Bluetooth video profiles, discovery, control, and AROS stack integration.
 - [ ] Evaluate RDP, WebRTC, and RTP/RTCP backends and document their supported roles.
 - [ ] Maintain an extensible protocol compatibility matrix and investigate further relevant protocols.
 
@@ -157,4 +157,4 @@ Initial public-source review: September 30, 2026. This review did not include co
 - [Bluetooth A/V Distribution Transport Protocol 1.3](https://www.bluetooth.com/specifications/specs/a-v-distribution-transport-protocol-1-3/)
 - [Microsoft Remote Desktop Protocol overview](https://learn.microsoft.com/en-us/windows/win32/termserv/remote-desktop-protocol)
 - [RFC 8835 — Transports for WebRTC](https://www.rfc-editor.org/rfc/rfc8835.html)
-- [RFC 3550 — RTP](https://www.rfc-editor.org/info/rfc3550/)
+- [RFC 3550 — RTP](https://www.rfc-editor.org/info/rfc3550/)\n- [UPnP Device Architecture 2.0](https://openconnectivity.org/developer/specifications/upnp-resources/upnp/)\n- [DLNA guidelines and certification](https://www.dlna.org/)
