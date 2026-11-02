@@ -44,3 +44,18 @@ A virtual or network-backed Gfx HIDD **might** allow a remote receiver to functi
 - [ ] Keep network protocols modular and reusable by clients and servers, independent of display routing.
 
 **Design constraint:** Do not implement competing monitor or bitmap dispatch abstractions until upstream extension points have been investigated.
+
+## Follow-up clarification from Kal (2026-11-02)
+
+> "CoolCat things like that should just be implemented as any other graphics hardware device, exposing a display with suitable modes - they do not (and should not) know anything about the multi-display handling, thats a function of the API's above them (intuition.library, monitor.class, etc)."
+
+**Architectural clarification:** a virtual/remote display should present itself as a normal graphics device exposing a display and appropriate modes. The device must **not** implement or be aware of multi-display coordination. That belongs to higher-level AROS APIs, including `intuition.library` and `monitor.class`.
+
+For Prism, this means:
+
+- Implement a virtual graphics device using the established graphics-device/HIDD model, subject to verification of the concrete interfaces.
+- Keep mode exposure and graphics-device responsibilities at the device layer.
+- Leave monitor topology, multi-display coordination, Screen placement, and related policies to the upstream higher-level APIs.
+- Keep remote transport, discovery, authentication, and session management modular; they should not become a second monitor manager.
+
+**Resolved design question:** Kal confirms that remote/virtual-style displays should follow the ordinary graphics-device model, rather than introducing special multi-display logic into the device. **Still open:** exact APIs, bitmap behavior, hotplug, cross-device blits, and implementation status/commits.
